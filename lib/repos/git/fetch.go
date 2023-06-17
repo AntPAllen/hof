@@ -14,6 +14,7 @@ import (
 	"github.com/go-git/go-git/v5/config"
 	"github.com/go-git/go-git/v5/plumbing/transport"
 	"github.com/go-git/go-git/v5/plumbing/transport/http"
+	"github.com/go-git/go-git/v5/plumbing/transport/ssh"
 	"github.com/go-git/go-git/v5/storage/memory"
 
 	"github.com/hofstadter-io/hof/lib/repos/utils"
@@ -23,17 +24,25 @@ import (
 var debug = false
 
 func IsNetworkReachable(ctx context.Context, mod string) (bool, error) {
-	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
-		Name: "origin",
-		URLs: []string{"https://" + mod},
-	})
-
 	host, _, _ := utils.ParseModURL(mod)
 
 	auth, err := getAuth(host, "", "")
 	if err != nil {
 		return false, fmt.Errorf("get auth: %w", err)
 	}
+
+	var url string
+	switch auth.(type) {
+	case *ssh.PublicKeys:
+		url = convertToSSHFormat(mod)
+	default:
+		url = "https://" + mod
+	}
+
+	rem := gogit.NewRemote(memory.NewStorage(), &config.RemoteConfig{
+		Name: "origin",
+		URLs: []string{url},
+	})
 
 	_, err = rem.ListContext(ctx, &gogit.ListOptions{
 		Auth: auth,
@@ -228,4 +237,25 @@ func getAuth(remote, owner, repo string) (auth transport.AuthMethod, err error) 
 	}
 	authMap.Store(remote, auth)
 	return auth, nil
+}
+
+func convertToSSHFormat(url string) string {
+	if strings.HasSuffix(url, ".git") {
+		return url
+	}
+	parts := strings.Split(url, "/")
+
+	if len(parts) < 2 {
+		return url
+	}
+
+	if strings.HasPrefix(parts[0], "http") {
+		domain := parts[2]
+		repoPath := strings.Join(parts[3:], "/")
+		return fmt.Sprintf("%s:%s", domain, repoPath)
+	}
+
+	domain := parts[0]
+	repoPath := strings.Join(parts[1:], "/")
+	return fmt.Sprintf("%s:%s.git", domain, repoPath)
 }
