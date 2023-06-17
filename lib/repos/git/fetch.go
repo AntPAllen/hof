@@ -252,7 +252,7 @@ func convertToSSHFormat(url string) string {
 	if strings.HasPrefix(parts[0], "http") {
 		domain := parts[2]
 		repoPath := strings.Join(parts[3:], "/")
-		return fmt.Sprintf("%s:%s", domain, repoPath)
+		return fmt.Sprintf("%s:%s.git", domain, repoPath)
 	}
 
 	domain := parts[0]
