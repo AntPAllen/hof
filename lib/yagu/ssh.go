@@ -41,7 +41,7 @@ func SSHCredentials(machine string) (SSHMachine, error) {
 
 	// try sshconfig
 	_, uerr := os.Lstat(filepath.Join(hdir, ".ssh", "config"))
-	_, serr := os.Lstat(filepath.Join("etc", "ssh", "ssh_config"))
+	_, serr := os.Lstat(filepath.Join("/etc", "ssh", "ssh_config"))
 	if uerr == nil || serr == nil {
 		return getSSHConfigVals(machine)
 	}
